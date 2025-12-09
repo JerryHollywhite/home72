@@ -12,7 +12,7 @@ export async function sendMessage(chatId: number, text: string, options?: any) {
     }
 }
 
-export async function send Photo(chatId: number, photo: string | Buffer, caption ?: string) {
+export async function sendPhoto(chatId: number, photo: string | Buffer, caption?: string) {
     try {
         await bot.sendPhoto(chatId, photo, { caption })
         return { success: true }

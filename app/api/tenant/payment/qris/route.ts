@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             success: true,
             payment_id: payment.id,
-            qr_code: qrCodeData Url,
+            qr_code: qrCodeDataUrl,
             expires_at: expiresAt.toISOString(),
             amount,
         })
