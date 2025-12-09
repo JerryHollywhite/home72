@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
             .from('reports')
             .select('*')
             .eq('tenant_id', tenantId)
-            .order('created_at', { descending: true })
+            .order('created_at', { ascending: false })
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 400 })
