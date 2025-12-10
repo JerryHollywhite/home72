@@ -2,6 +2,28 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+    // ========================================
+    // SUBDOMAIN-BASED REDIRECTS
+    // ========================================
+    const hostname = request.headers.get('host') || ''
+    const pathname = request.nextUrl.pathname
+
+    // Admin subdomain: jerry.adminkos.otomasikan.com → /auth/login
+    if (hostname.includes('jerry.adminkos.otomasikan.com') && pathname === '/') {
+        return NextResponse.redirect(new URL('/auth/login', request.url))
+    }
+
+    // Tenant subdomain: userkos.otomasikan.com → /tenant/login
+    if (hostname.includes('userkos.otomasikan.com') && pathname === '/') {
+        return NextResponse.redirect(new URL('/tenant/login', request.url))
+    }
+
+    // Booking subdomain: bookingkos.otomasikan.com → /booking
+    if (hostname.includes('bookingkos.otomasikan.com') && pathname === '/') {
+        return NextResponse.redirect(new URL('/booking', request.url))
+    }
+    // ========================================
+
     let response = NextResponse.next({
         request: {
             headers: request.headers,
@@ -56,7 +78,6 @@ export async function middleware(request: NextRequest) {
 
     const { data: { session } } = await supabase.auth.getSession()
 
-    const pathname = request.nextUrl.pathname
     const isAuthPage = pathname.startsWith('/auth')
     const isPublicBooking = pathname.startsWith('/booking')
     const isTenantLogin = pathname === '/tenant/login'
