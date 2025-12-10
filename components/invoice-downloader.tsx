@@ -131,7 +131,6 @@ export function InvoiceDownloader({ payment, tenant }: { payment: any, tenant: a
                 const pageWidth = doc.internal.pageSize.width;
                 const pageHeight = doc.internal.pageSize.height;
 
-                doc.saveGraphicsState();
                 doc.setTextColor(200, 250, 200); // Very light green
                 doc.setFontSize(60);
                 doc.setFont('helvetica', 'bold');
@@ -139,15 +138,12 @@ export function InvoiceDownloader({ payment, tenant }: { payment: any, tenant: a
                 // Rotate and place in center
                 doc.text('LUNAS', pageWidth / 2, pageHeight / 2, {
                     align: 'center',
-                    angle: 45,
-                    renderingMode: 'fill'
+                    angle: 45
                 });
-
-                doc.restoreGraphicsState();
             }
 
             // Footer text
-            // const pageHeight already declared above or accessible
+            const pageHeight = doc.internal.pageSize.height;
             doc.setFontSize(9)
             doc.setTextColor(mutedColor)
             doc.setFont('helvetica', 'normal')
