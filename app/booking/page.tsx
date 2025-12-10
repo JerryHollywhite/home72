@@ -54,7 +54,7 @@ export default function BookingPage() {
         setSelectedRoom(room)
         setFormData({
             ...formData,
-            dp_amount: Math.round(room.price * 0.3).toString(), // Default DP 30%
+            dp_amount: room.price.toString(), // Full 1 Month Deposit
         })
         setIsDialogOpen(true)
     }
@@ -211,12 +211,23 @@ export default function BookingPage() {
                                 <AlertDescription className="text-green-600">{success}</AlertDescription>
                             </Alert>
                         )}
+
                         <div>
                             <p className="text-sm text-gray-600">Harga Sewa</p>
                             <p className="text-2xl font-bold text-blue-600">
                                 Rp {selectedRoom?.price.toLocaleString('id-ID')}/bulan
                             </p>
                         </div>
+
+                        {/* Deposit Rule */}
+                        <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                            <p className="text-sm text-yellow-800 font-medium mb-1">Syarat & Ketentuan Booking:</p>
+                            <ul className="text-xs text-yellow-700 list-disc list-inside space-y-1">
+                                <li>Deposit wajib <strong>1 Bulan Sewa</strong> (Rp {selectedRoom?.price.toLocaleString('id-ID')}).</li>
+                                <li>Deposit ini akan <strong>dikembalikan utuh</strong> saat checkout (jika tidak ada kerusakan).</li>
+                            </ul>
+                        </div>
+
                         <div className="space-y-2">
                             <Label htmlFor="name">Nama Lengkap *</Label>
                             <Input
@@ -224,6 +235,7 @@ export default function BookingPage() {
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 required
+                                placeholder="Masukkan nama lengkap Anda"
                             />
                         </div>
                         <div className="space-y-2">
@@ -234,6 +246,7 @@ export default function BookingPage() {
                                 value={formData.phone}
                                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                 required
+                                placeholder="0812xxxxxxxx"
                             />
                         </div>
                         <div className="space-y-2">
@@ -246,21 +259,41 @@ export default function BookingPage() {
                                 required
                             />
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="dp_amount">Uang Muka (DP)</Label>
-                            <Input
-                                id="dp_amount"
-                                type="number"
-                                value={formData.dp_amount}
-                                onChange={(e) => setFormData({ ...formData, dp_amount: e.target.value })}
-                                placeholder="Opsional"
-                            />
-                            <p className="text-xs text-gray-500">
-                                Rekomendasi: Rp {selectedRoom ? Math.round(selectedRoom.price * 0.3).toLocaleString('id-ID') : 0} (30%)
-                            </p>
+
+                        {/* Payment Info */}
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 space-y-2">
+                            <p className="text-sm font-semibold text-blue-900">Silakan Transfer Pembayaran:</p>
+                            <div className="text-blue-800">
+                                <p className="text-xs text-blue-600">Bank Transfer</p>
+                                <p className="font-bold text-lg font-mono">BCA 1234567890</p>
+                                <p className="text-sm">a.n Home72 Management</p>
+                            </div>
+                            <div className="pt-2 border-t border-blue-200">
+                                <p className="text-xs text-blue-700">Total yang harus ditransfer:</p>
+                                <p className="text-xl font-bold text-blue-900">
+                                    Rp {selectedRoom?.price.toLocaleString('id-ID')}
+                                </p>
+                                <p className="text-[10px] text-blue-600 italic">
+                                    (1 Bulan Sewa sebagai Deposit)
+                                </p>
+                            </div>
                         </div>
-                        <Button type="submit" className="w-full">
-                            Konfirmasi Booking
+
+                        {/* Payment Confirmation Checkbox */}
+                        <div className="flex items-start space-x-2">
+                            <input
+                                type="checkbox"
+                                id="payment_confirmed"
+                                className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                required
+                            />
+                            <Label htmlFor="payment_confirmed" className="text-sm text-gray-600 font-normal cursor-pointer leading-tight">
+                                Saya menyatakan sudah melakukan transfer pembayaran sebesar <strong>Rp {selectedRoom?.price.toLocaleString('id-ID')}</strong> ke rekening di atas.
+                            </Label>
+                        </div>
+
+                        <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
+                            Konfirmasi & Kirim Bukti Booking
                         </Button>
                     </form>
                 </DialogContent>

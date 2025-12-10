@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { Home, LayoutDashboard, DoorOpen, Users, CreditCard, MessageSquare, LogOut } from 'lucide-react'
+import { Home, LayoutDashboard, DoorOpen, Users, CreditCard, MessageSquare, LogOut, Inbox } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
     DropdownMenu,
@@ -15,6 +15,7 @@ import { createClient } from '@/lib/supabase/client'
 
 const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Incoming', href: '/dashboard/bookings', icon: Inbox },
     { name: 'Kamar', href: '/rooms', icon: DoorOpen },
     { name: 'Penyewa', href: '/tenants', icon: Users },
     { name: 'Pembayaran', href: '/payments', icon: CreditCard },
@@ -53,8 +54,8 @@ export function Navbar() {
                                     key={item.name}
                                     href={item.href}
                                     className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive
-                                            ? 'bg-blue-800 text-white'
-                                            : 'text-blue-100 hover:bg-blue-500 hover:text-white'
+                                        ? 'bg-blue-800 text-white'
+                                        : 'text-blue-100 hover:bg-blue-500 hover:text-white'
                                         }`}
                                 >
                                     <Icon className="h-4 w-4" />
