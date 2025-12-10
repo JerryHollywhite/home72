@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle, XCircle, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/client'
 
 type Booking = {
     id: string
@@ -44,10 +44,7 @@ export default function BookingsPage() {
 
     const fetchBookings = async () => {
         try {
-            const supabase = createClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-            )
+            const supabase = createClient()
 
             const { data, error } = await supabase
                 .from('booking')

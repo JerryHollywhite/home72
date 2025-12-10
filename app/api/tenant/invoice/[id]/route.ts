@@ -194,12 +194,15 @@ export async function GET(
 
 
         // Generate PDF buffer
-        const pdfBuffer = doc.output('arraybuffer')
+        const pdfArrayBuffer = doc.output('arraybuffer')
+        const pdfBuffer = Buffer.from(pdfArrayBuffer) // Ensure it's a Node Buffer
 
-        return new Response(pdfBuffer, {
+        return new NextResponse(pdfBuffer, {
+            status: 200,
             headers: {
                 'Content-Type': 'application/pdf',
                 'Content-Disposition': `attachment; filename="Invoice_${payment.month}.pdf"`,
+                'Content-Length': pdfBuffer.length.toString()
             },
         })
     } catch (error: any) {

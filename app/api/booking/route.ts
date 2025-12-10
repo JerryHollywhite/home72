@@ -37,7 +37,14 @@ export async function POST(request: NextRequest) {
 
         const { data, error } = await supabase
             .from('booking')
-            .insert(body)
+            .insert({
+                name: body.name,
+                phone: body.phone,
+                room_id: body.room_id,
+                booking_date: body.booking_date,
+                dp_amount: body.dp_amount,
+                proof_url: body.proof_url
+            })
             .select(`
                 *,
                 rooms (room_number)
@@ -59,6 +66,7 @@ export async function POST(request: NextRequest) {
 🏠 Kamar: ${data.rooms?.room_number}
 📅 Tgl Mulai: ${body.booking_date}
 💰 Deposit: Rp ${Number(body.dp_amount || 0).toLocaleString('id-ID')}
+📎 [Bukti Transfer](${body.proof_url})
 
 Mohon cek Dashboard untuk Approval.
             `.trim()

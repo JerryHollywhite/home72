@@ -31,6 +31,8 @@ export default function BookingPage() {
         booking_date: '',
         dp_amount: '',
     })
+    const [proofFile, setProofFile] = useState<File | null>(null)
+    const [uploading, setUploading] = useState(false)
     const [error, setError] = useState('')
     const [success, setSuccess] = useState('')
 
@@ -59,14 +61,49 @@ export default function BookingPage() {
         setIsDialogOpen(true)
     }
 
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setProofFile(e.target.files[0])
+        }
+    }
+
+    const uploadProof = async (file: File): Promise<string> => {
+        const formData = new FormData()
+        formData.append('file', file)
+
+        // Use a dedicated upload API to handle storage securely
+        const res = await fetch('/api/booking/upload', {
+            method: 'POST',
+            body: formData
+        })
+
+        if (!res.ok) {
+            const err = await res.json()
+            throw new Error(err.error || 'Gagal upload bukti bayar')
+        }
+
+        const data = await res.json()
+        return data.url
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setError('')
         setSuccess('')
 
         if (!selectedRoom) return
+        if (!proofFile) {
+            setError('Mohon upload bukti transfer terlebih dahulu')
+            return
+        }
 
         try {
+            setUploading(true)
+
+            // 1. Upload Proof
+            const proofUrl = await uploadProof(proofFile)
+
+            // 2. Create Booking
             const res = await fetch('/api/booking', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -76,6 +113,7 @@ export default function BookingPage() {
                     room_id: selectedRoom.id,
                     booking_date: formData.booking_date,
                     dp_amount: Number(formData.dp_amount),
+                    proof_url: proofUrl
                 }),
             })
 
@@ -91,12 +129,15 @@ export default function BookingPage() {
                 booking_date: '',
                 dp_amount: '',
             })
+            setProofFile(null)
             setTimeout(() => {
                 setIsDialogOpen(false)
                 setSuccess('')
             }, 2000)
         } catch (error: any) {
             setError(error.message)
+        } finally {
+            setUploading(false)
         }
     }
 
@@ -279,22 +320,31 @@ export default function BookingPage() {
                             </div>
                         </div>
 
-                        {/* Payment Confirmation Checkbox */}
-                        <div className="flex items-start space-x-2">
-                            <input
-                                type="checkbox"
-                                id="payment_confirmed"
-                                className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        {/* Payment Proof Upload */}
+                        <div className="space-y-2">
+                            <Label htmlFor="proof">Bukti Transfer (Wajib) *</Label>
+                            <Input
+                                id="proof"
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileChange}
                                 required
+                                className="cursor-pointer"
                             />
-                            <Label htmlFor="payment_confirmed" className="text-sm text-gray-600 font-normal cursor-pointer leading-tight">
-                                Saya menyatakan sudah melakukan transfer pembayaran sebesar <strong>Rp {selectedRoom?.price.toLocaleString('id-ID')}</strong> ke rekening di atas.
-                            </Label>
+                            <p className="text-xs text-gray-500">
+                                Upload foto/screenshot bukti transfer.
+                            </p>
                         </div>
 
-                        <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
-                            Konfirmasi & Kirim Bukti Booking
-                        </Button>
+                        {(uploading || loading) ? (
+                            <Button disabled className="w-full">
+                                {uploading ? 'Mengupload Bukti...' : 'Memproses...'}
+                            </Button>
+                        ) : (
+                            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
+                                Konfirmasi & Kirim Bukti Booking
+                            </Button>
+                        )}
                     </form>
                 </DialogContent>
             </Dialog>
