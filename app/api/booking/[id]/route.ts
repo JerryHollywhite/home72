@@ -60,14 +60,31 @@ export async function PATCH(
 
             if (roomError) throw new Error('Gagal update status kamar')
 
-            // 4. Update Booking Status
+            // 4a. Create Initial Payment Record (Deposit + First Month verified)
+            const { error: paymentError } = await supabase
+                .from('payments')
+                .insert({
+                    tenant_id: tenant.id,
+                    amount: booking.dp_amount,
+                    month: new Date(booking.booking_date).toISOString().slice(0, 7), // YYYY-MM
+                    status: 'verified',
+                    payment_method: 'transfer',
+                    proof_url: booking.proof_url
+                })
+
+            if (paymentError) {
+                console.error('Failed to create initial payment:', paymentError)
+                // Don't throw, just log. Tenant creation is more critical.
+            }
+
+            // 5. Update Booking Status
             await supabase.from('booking').update({ status: 'confirmed' }).eq('id', id)
 
-            // 5. Send Telegram Notification (Optional: Notify Admin or formatted message)
+            // 6. Send Telegram Notification
             if (process.env.TELEGRAM_ADMIN_CHAT_ID) {
                 await sendMessage(
                     Number(process.env.TELEGRAM_ADMIN_CHAT_ID),
-                    `✅ *Booking Approved!*\n\nPenyewa ${booking.name} resmi menempati Kamar ${booking.rooms?.room_number}.\nStatus kamar sekarang: Occupied.`
+                    `✅ *Booking Approved!*\n\nPenyewa ${booking.name} resmi menempati Kamar ${booking.rooms?.room_number}.\nStatus kamar sekarang: Occupied.\nPembayaran awal Rp ${Number(booking.dp_amount).toLocaleString('id-ID')} telah dicatat.`
                 )
             }
 
