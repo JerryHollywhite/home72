@@ -9,41 +9,36 @@ const supabase = createClient(
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string }> }
+    params: { params: Promise<{ id: string }> } // Correct type for Next.js 15+
 ) {
-    const { id } = await params
-
     try {
-        console.log('Fetching invoice for ID:', id)
+        const { id } = await params.params // Next.js 15 unwrapping
 
-        // Get payment with tenant info
-        const { data: payment, error } = await supabase
+        console.log('Generating invoice for:', id)
+
+        // 1. Get payment details
+        const { data: payment, error: paymentError } = await supabase
             .from('payments')
-            .select(`
-        *,
-        tenants (
-          name,
-          phone,
-          email,
-          rooms (
-            room_number
-          )
-        )
-      `)
+            .select('*')
             .eq('id', id)
             .single()
 
-        if (error) {
-            console.error('Invoice DB Error:', error)
-            return NextResponse.json({ error: error.message }, { status: 500 })
-        }
-
-        if (!payment) {
-            console.error('Invoice not found (payment is null)')
+        if (paymentError || !payment) {
+            console.error('Payment not found:', paymentError)
             return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
         }
 
-        console.log('Payment found:', payment)
+        // 2. Get tenant details
+        const { data: tenant, error: tenantError } = await supabase
+            .from('tenants')
+            .select('*, rooms(room_number)')
+            .eq('id', payment.tenant_id)
+            .single()
+
+        if (tenantError) {
+            console.error('Tenant not found for invoice:', tenantError)
+            // Continue with limited info if tenant not found
+        }
 
         // Generate PDF
         const doc = new jsPDF()
@@ -60,16 +55,20 @@ export async function GET(
         // Invoice Info
         doc.setTextColor(0, 0, 0)
         doc.setFontSize(10)
-        doc.text(`Invoice ID: ${payment.id}`, 20, 55)
+        doc.text(`Invoice ID: ${payment.id.substring(0, 8)}...`, 20, 55)
         doc.text(`Tanggal: ${new Date(payment.created_at).toLocaleDateString('id-ID')}`, 20, 62)
 
         // Tenant Info
         doc.setFontSize(12)
         doc.text('Informasi Penyewa:', 20, 75)
         doc.setFontSize(10)
-        doc.text(`Nama: ${(payment.tenants as any)?.name || 'N/A'}`, 20, 82)
-        doc.text(`Kamar: ${(payment.tenants as any)?.rooms?.room_number || 'N/A'}`, 20, 89)
-        doc.text(`Telepon: ${(payment.tenants as any)?.phone || 'N/A'}`, 20, 96)
+        if (tenant) {
+            doc.text(`Nama: ${tenant.name}`, 20, 82)
+            doc.text(`Kamar: ${(tenant.rooms as any)?.room_number || 'N/A'}`, 20, 89)
+            doc.text(`Telepon: ${tenant.phone}`, 20, 96)
+        } else {
+            doc.text('Pelanggan: Informasi tidak tersedia', 20, 82)
+        }
 
         // Payment Details
         doc.setFontSize(12)
@@ -78,10 +77,25 @@ export async function GET(
         doc.text(`Periode: ${payment.month}`, 20, 122)
         doc.text(`Metode: ${payment.payment_method === 'qris' ? 'QRIS' : payment.payment_method === 'transfer' ? 'Transfer Bank' : 'Cash'}`, 20, 129)
         doc.text(`Jumlah: Rp ${payment.amount.toLocaleString('id-ID')}`, 20, 136)
-        doc.text(`Status: ${payment.status === 'verified' ? 'Terverifikasi' : payment.status === 'pending' ? 'Menunggu Verifikasi' : 'Ditolak'}`, 20, 143)
+
+        let statusLabel = 'Menunggu Verifikasi'
+        if (payment.status === 'verified') statusLabel = 'LUNAS / TERVERIFIKASI'
+        if (payment.status === 'rejected') statusLabel = 'DITOLAK'
+
+        doc.text(`Status: ${statusLabel}`, 20, 143)
 
         if (payment.verified_at) {
             doc.text(`Diverifikasi: ${new Date(payment.verified_at).toLocaleDateString('id-ID')}`, 20, 150)
+        }
+
+        // Add Stamp/Signature placeholder for verified
+        if (payment.status === 'verified') {
+            doc.setDrawColor(37, 99, 235)
+            doc.setLineWidth(1)
+            doc.rect(140, 110, 50, 20)
+            doc.setTextColor(37, 99, 235)
+            doc.setFontSize(10)
+            doc.text('LUNAS', 150, 122)
         }
 
         // Footer
@@ -96,7 +110,7 @@ export async function GET(
         return new Response(pdfBuffer, {
             headers: {
                 'Content-Type': 'application/pdf',
-                'Content-Disposition': `attachment; filename="Invoice_${payment.month}_${(payment.tenants as any)?.rooms?.room_number}.pdf"`,
+                'Content-Disposition': `attachment; filename="Invoice_${payment.month}.pdf"`,
             },
         })
     } catch (error: any) {
