@@ -351,8 +351,6 @@ async function handleStatusCheck(chatId: number, session: any) {
     }
 }
 
-import jsPDF from 'jspdf'
-
 // ... existing imports ...
 
 // ... existing code ...
