@@ -115,6 +115,13 @@ export async function GET(
         })
     } catch (error: any) {
         console.error('PDF generation error:', error)
-        return NextResponse.json({ error: error.message }, { status: 500 })
+        return NextResponse.json(
+            {
+                error: 'Invoice Generation Failed',
+                details: error.message,
+                stack: error.stack
+            },
+            { status: 500 }
+        )
     }
 }
