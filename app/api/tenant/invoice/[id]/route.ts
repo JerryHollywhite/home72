@@ -25,7 +25,11 @@ export async function GET(
 
         if (paymentError || !payment) {
             console.error('Payment not found:', paymentError)
-            return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
+            return NextResponse.json({
+                error: 'Payment not found',
+                details: paymentError,
+                id_queried: id
+            }, { status: 404 })
         }
 
         // 2. Get tenant details
