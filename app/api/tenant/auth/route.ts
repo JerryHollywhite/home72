@@ -26,35 +26,45 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        // Find active tenant with this room number
-        const { data: tenant, error } = await supabase
-            .from('tenants')
-            .select(`
-        id,
-        name,
-        phone,
-        email,
-        room_id,
-        due_date,
-        telegram_chat_id,
-        rooms (
-          room_number,
-          price,
-          facilities
-        )
-      `)
-            .eq('status', 'active')
-            .eq('rooms.room_number', room_number)
+        // 1. Find the room first (Reliable approach)
+        const { data: room, error: roomError } = await supabase
+            .from('rooms')
+            .select('id, room_number, price, facilities')
+            .eq('room_number', room_number)
             .single()
 
-        if (error || !tenant) {
+        if (roomError || !room) {
+            console.error('Room lookup failed:', roomError)
             return NextResponse.json(
-                { error: 'Nomor kamar tidak ditemukan atau tidak aktif' },
+                { error: 'Nomor kamar tidak ditemukan' },
                 { status: 404 }
             )
         }
 
-        // Return tenant data (in real app, you'd create a session here)
+        // 2. Find active tenant for this room
+        const { data: tenant, error: tenantError } = await supabase
+            .from('tenants')
+            .select('id, name, phone, email, due_date, telegram_chat_id')
+            .eq('room_id', room.id)
+            .eq('status', 'active')
+            .maybeSingle() // Use maybeSingle to handle empty result gracefully
+
+        if (tenantError) {
+            console.error('Tenant lookup error:', tenantError)
+            return NextResponse.json(
+                { error: 'Terjadi kesalahan sistem' },
+                { status: 500 }
+            )
+        }
+
+        if (!tenant) {
+            return NextResponse.json(
+                { error: 'Kamar ini belum dihuni atau akun tidak aktif. Hubungi admin.' },
+                { status: 404 }
+            )
+        }
+
+        // Return tenant data combined with room data
         return NextResponse.json({
             success: true,
             tenant: {
@@ -62,9 +72,9 @@ export async function POST(request: NextRequest) {
                 name: tenant.name,
                 phone: tenant.phone,
                 email: tenant.email,
-                room_number: (tenant.rooms as any)?.room_number,
-                price: (tenant.rooms as any)?.price,
-                facilities: (tenant.rooms as any)?.facilities,
+                room_number: room.room_number,
+                price: room.price,
+                facilities: room.facilities,
                 due_date: tenant.due_date,
                 telegram_connected: !!tenant.telegram_chat_id,
             },
