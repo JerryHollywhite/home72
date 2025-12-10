@@ -14,6 +14,8 @@ export async function GET(
     const { id } = await params
 
     try {
+        console.log('Fetching invoice for ID:', id)
+
         // Get payment with tenant info
         const { data: payment, error } = await supabase
             .from('payments')
@@ -31,9 +33,17 @@ export async function GET(
             .eq('id', id)
             .single()
 
-        if (error || !payment) {
+        if (error) {
+            console.error('Invoice DB Error:', error)
+            return NextResponse.json({ error: error.message }, { status: 500 })
+        }
+
+        if (!payment) {
+            console.error('Invoice not found (payment is null)')
             return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
         }
+
+        console.log('Payment found:', payment)
 
         // Generate PDF
         const doc = new jsPDF()
