@@ -37,9 +37,12 @@ export default function LoginPage() {
             router.push('/dashboard')
             router.refresh()
             console.timeEnd('Router Push')
+
+            // NOTE: Do not set loading(false) here. 
+            // We want the button to stay disabled while redirecting.
+
         } catch (err: any) {
             setError(err.message || 'Login gagal. Periksa email dan password Anda.')
-        } finally {
             setLoading(false)
         }
     }
@@ -96,7 +99,7 @@ export default function LoginPage() {
                             className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
                             disabled={loading}
                         >
-                            {loading ? 'Masuk...' : 'Masuk'}
+                            {loading ? 'Memproses...' : 'Masuk'}
                         </Button>
                     </form>
                 </CardContent>
