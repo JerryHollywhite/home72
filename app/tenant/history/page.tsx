@@ -61,7 +61,7 @@ export default function PaymentHistoryPage() {
 
     const handleDownloadInvoice = async (paymentId: string) => {
         try {
-            const res = await fetch(`/api/tenant/invoice/${paymentId}`)
+            const res = await fetch(`/api/tenant/invoice/${paymentId}?v=${new Date().getTime()}`)
             const blob = await res.blob()
             const url = window.URL.createObjectURL(blob)
             const a = document.createElement('a')

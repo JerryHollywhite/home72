@@ -24,15 +24,19 @@ export default function LoginPage() {
         setError('')
 
         try {
+            console.time('Supabase Login')
             const { data, error } = await supabase.auth.signInWithPassword({
                 email,
                 password,
             })
+            console.timeEnd('Supabase Login')
 
             if (error) throw error
 
+            console.time('Router Push')
             router.push('/dashboard')
             router.refresh()
+            console.timeEnd('Router Push')
         } catch (err: any) {
             setError(err.message || 'Login gagal. Periksa email dan password Anda.')
         } finally {
