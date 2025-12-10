@@ -339,10 +339,13 @@ export default function BookingPage() {
 
                         <div className="space-y-2 text-sm">
                             <p className="font-medium">Silakan transfer Total ke:</p>
-                            <div className="bg-gray-100 p-3 rounded text-center font-mono text-lg font-bold tracking-wider border border-gray-300">
-                                BCA 1234567890
+                            <div className="bg-blue-50 p-3 rounded text-center border border-blue-200">
+                                <p className="text-xs text-blue-600 font-bold mb-1">SEABANK</p>
+                                <div className="font-mono text-xl font-bold tracking-wider text-blue-900">
+                                    9012 9691 8816
+                                </div>
+                                <p className="text-gray-600 text-xs mt-1">a.n. Heriyanto</p>
                             </div>
-                            <p className="text-center text-gray-500 text-xs">a.n. Home72 Management</p>
                         </div>
 
                         {/* KTP Upload */}
