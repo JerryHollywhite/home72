@@ -174,11 +174,57 @@ async function handleRoomRegistration(chatId: number, roomNumber: string, sessio
     )
 }
 
+async function uploadTelegramFile(fileId: string, bucketName: string) {
+    try {
+        // 1. Get file path from Telegram
+        const token = process.env.TELEGRAM_BOT_TOKEN
+        const fileRes = await fetch(`https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`)
+        const fileData = await fileRes.json()
+
+        if (!fileData.ok) throw new Error('Failed to get file path from Telegram')
+
+        const filePath = fileData.result.file_path
+        const fileUrl = `https://api.telegram.org/file/bot${token}/${filePath}`
+
+        // 2. Download file
+        const imageRes = await fetch(fileUrl)
+        const imageBuffer = await imageRes.arrayBuffer()
+
+        // 3. Upload to Supabase
+        // Generate filename: timestamp_random.jpg
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`
+
+        const { data, error } = await supabase.storage
+            .from(bucketName)
+            .upload(fileName, imageBuffer, {
+                contentType: 'image/jpeg',
+                upsert: false
+            })
+
+        if (error) {
+            console.error('Supabase storage upload error:', error)
+            throw error
+        }
+
+        // 4. Get Public URL
+        const { data: { publicUrl } } = supabase.storage
+            .from(bucketName)
+            .getPublicUrl(fileName)
+
+        return publicUrl
+    } catch (error) {
+        console.error('Upload helper error:', error)
+        return null
+    }
+}
+
 async function handlePaymentPhoto(chatId: number, photo: any, session: any) {
     if (!photo) {
         await sendMessage(chatId, 'Silakan kirim foto bukti transfer.')
         return
     }
+
+    await sendMessage(chatId, '⏳ Sedang mengupload bukti bayar...')
 
     try {
         // Get tenant data
@@ -190,10 +236,14 @@ async function handlePaymentPhoto(chatId: number, photo: any, session: any) {
 
         if (!tenant) throw new Error('Tenant not found')
 
-        // Download photo from Telegram
-        // In production, you'd download and upload to Supabase Storage
-        // For now, we'll use the file_id as reference
+        // UPLOAD TO SUPABASE STORAGE
         const file_id = photo.file_id
+        const publicUrl = await uploadTelegramFile(file_id, 'payment-proofs')
+
+        if (!publicUrl) {
+            throw new Error('Gagal upload ke storage')
+        }
+
         const currentMonth = format(new Date(), 'yyyy-MM')
 
         // Create payment record
@@ -203,7 +253,7 @@ async function handlePaymentPhoto(chatId: number, photo: any, session: any) {
             amount: (tenant.rooms as any).price,
             status: 'pending',
             payment_method: 'transfer',
-            proof_url: `telegram_file:${file_id}`, // Placeholder
+            proof_url: publicUrl, // Now saving real URL!
         })
 
         await sendMessage(
@@ -211,7 +261,7 @@ async function handlePaymentPhoto(chatId: number, photo: any, session: any) {
             `✅ *Bukti bayar diterima!*\n\n` +
             `Bulan: ${format(new Date(), 'MMMM yyyy')}\n` +
             `Jumlah: Rp ${(tenant.rooms as any).price.toLocaleString('id-ID')}\n\n` +
-            `Menunggu verifikasi admin. Anda akan mendapat notifikasi jika sudah diverifikasi.`,
+            `Menunggu verifikasi admin.`,
             { parse_mode: 'Markdown' }
         )
 
@@ -228,22 +278,29 @@ async function handlePaymentPhoto(chatId: number, photo: any, session: any) {
 async function handleComplaint(chatId: number, text: string, photo: any, session: any) {
     try {
         let photo_url = null
+
         if (photo) {
-            photo_url = `telegram_file:${photo.file_id}` // Placeholder
+            await sendMessage(chatId, '⏳ Mengupload foto laporan...')
+            const file_id = photo.file_id
+            photo_url = await uploadTelegramFile(file_id, 'report-photos')
+
+            if (!photo_url) {
+                await sendMessage(chatId, '⚠️ Gagal upload foto, laporan akan dikirim tanpa foto.')
+            }
         }
 
-        const message = text || 'Lihat foto'
+        const message = text || (photo ? 'Lampiran Foto' : 'Tanpa Keterangan')
 
         await supabase.from('reports').insert({
             tenant_id: session.tenant_id,
             message,
-            photo_url,
+            photo_url, // Real URL or null
             status: 'open',
         })
 
         await sendMessage(
             chatId,
-            `✅ *Pengaduan Diterima!*\n\nPengaduan Anda telah dikirim ke admin.\n\nAnda akan mendapat update status melalui bot ini.`,
+            `✅ *Pengaduan Diterima!*\n\nPengaduan Anda telah dikirim ke admin.`,
             { parse_mode: 'Markdown' }
         )
 
