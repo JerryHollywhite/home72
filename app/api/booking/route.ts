@@ -61,20 +61,20 @@ export async function POST(request: NextRequest) {
         if (process.env.TELEGRAM_ADMIN_CHAT_ID) {
             console.log('Attempting to send Telegram notification to:', process.env.TELEGRAM_ADMIN_CHAT_ID)
             const message = `
-🔔 *Booking Baru!*
+🔔 Booking Baru!
 
 👤 Nama: ${body.name}
 📱 Phone: ${body.phone}
 🏠 Kamar: ${data.rooms?.room_number}
 📅 Tgl Mulai: ${body.booking_date}
 💰 Deposit: Rp ${Number(body.dp_amount || 0).toLocaleString('id-ID')}
-📎 [Bukti Transfer](${body.proof_url})
-🪪 [KTP/Identitas](${body.ktp_url || '#'})
+📎 Bukti Transfer: ${body.proof_url}
+🪪 KTP/Identitas: ${body.ktp_url || '-'}
 
 Mohon cek Dashboard untuk Approval.
             `.trim()
 
-            const telegramRes = await sendMessage(Number(process.env.TELEGRAM_ADMIN_CHAT_ID), message, { parse_mode: 'Markdown' })
+            const telegramRes = await sendMessage(Number(process.env.TELEGRAM_ADMIN_CHAT_ID), message)
             console.log('Telegram response:', telegramRes)
         } else {
             console.warn('TELEGRAM_ADMIN_CHAT_ID is not set, skipping notification')
