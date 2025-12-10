@@ -2,7 +2,6 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { sendMessage, sendDocument, getKeyboard } from '@/lib/telegram/bot'
 import { format } from 'date-fns'
-import jsPDF from 'jspdf'
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -389,7 +388,8 @@ async function handleInvoiceRequest(chatId: number, session: any) {
 
         await sendMessage(chatId, '📄 Sedang membuat invoice PDF...')
 
-        // 2. Generate PDF (Same logic as API)
+        // 2. Generate PDF (Lazy load to prevent cold start crashes)
+        const { jsPDF } = await import('jspdf')
         const doc = new jsPDF()
 
         // Header
