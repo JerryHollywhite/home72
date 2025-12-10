@@ -127,17 +127,27 @@ export function InvoiceDownloader({ payment, tenant }: { payment: any, tenant: a
 
             // --- FOOTER & STAMP ---
             if (payment.status === 'verified') {
-                // "LUNAS" Stamp
-                doc.setDrawColor(22, 163, 74)
-                doc.setLineWidth(1)
-                doc.roundedRect(150, finalY - 50, 40, 15, 2, 2, 'D')
-                doc.setTextColor(22, 163, 74)
-                doc.setFontSize(12)
-                doc.text('LUNAS', 170, finalY - 40, { align: 'center', angle: -10 })
+                // WATERMARK "LUNAS"
+                const pageWidth = doc.internal.pageSize.width;
+                const pageHeight = doc.internal.pageSize.height;
+
+                doc.saveGraphicsState();
+                doc.setTextColor(200, 250, 200); // Very light green
+                doc.setFontSize(60);
+                doc.setFont('helvetica', 'bold');
+
+                // Rotate and place in center
+                doc.text('LUNAS', pageWidth / 2, pageHeight / 2, {
+                    align: 'center',
+                    angle: 45,
+                    renderingMode: 'fill'
+                });
+
+                doc.restoreGraphicsState();
             }
 
             // Footer text
-            const pageHeight = doc.internal.pageSize.height
+            // const pageHeight already declared above or accessible
             doc.setFontSize(9)
             doc.setTextColor(mutedColor)
             doc.setFont('helvetica', 'normal')

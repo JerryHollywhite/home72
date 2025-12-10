@@ -122,7 +122,16 @@ export default async function DashboardPage() {
         <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-                <p className="text-gray-600 mt-1">Selamat datang di Home72 Management System</p>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1">
+                    <p className="text-gray-600">Selamat datang di Home72 Management System</p>
+                    <a
+                        href="/api/telegram/setup"
+                        target="_blank"
+                        className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded hover:bg-blue-200 transition"
+                    >
+                        Reconnect Bot
+                    </a>
+                </div>
             </div>
 
             {/* Statistics Cards */}
