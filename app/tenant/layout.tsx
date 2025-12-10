@@ -1,5 +1,12 @@
 import { DoorOpen, LogOut } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+
+'use client'
+
+export const dynamic = 'force-dynamic'
+export const dynamicParams = true
+export const revalidate = 0
 
 export default function TenantLayout({
     children,
