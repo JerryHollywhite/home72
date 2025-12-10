@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { sendMessage, sendDocument, getKeyboard } from '@/lib/telegram/bot'
 import { format } from 'date-fns'
+import jsPDF from 'jspdf'
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -350,6 +351,12 @@ async function handleStatusCheck(chatId: number, session: any) {
     }
 }
 
+import jsPDF from 'jspdf'
+
+// ... existing imports ...
+
+// ... existing code ...
+
 async function handleInvoiceRequest(chatId: number, session: any) {
     if (!session.tenant_id) {
         await sendMessage(chatId, 'Anda belum terdaftar. Gunakan /start terlebih dahulu.')
@@ -357,9 +364,20 @@ async function handleInvoiceRequest(chatId: number, session: any) {
     }
 
     try {
+        // 1. Get payment and tenant data
         const { data: payment } = await supabase
             .from('payments')
-            .select('*')
+            .select(`
+                *,
+                tenants (
+                    name,
+                    phone,
+                    email,
+                    rooms (
+                        room_number
+                    )
+                )
+            `)
             .eq('tenant_id', session.tenant_id)
             .eq('status', 'verified')
             .order('verified_at', { ascending: false })
@@ -371,20 +389,71 @@ async function handleInvoiceRequest(chatId: number, session: any) {
             return
         }
 
-        await sendMessage(chatId, '📄 Generating invoice...')
+        await sendMessage(chatId, '📄 Sedang membuat invoice PDF...')
 
-        // Generate PDF invoice via API
-        const invoiceUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/tenant/invoice/${payment.id}`
+        // 2. Generate PDF (Same logic as API)
+        const doc = new jsPDF()
 
-        await sendMessage(
-            chatId,
-            `📄 *Invoice ${payment.month}*\n\n` +
-            `Download: ${invoiceUrl}\n\n` +
-            `Atau akses melalui portal web.`,
-            { parse_mode: 'Markdown' }
-        )
+        // Header
+        doc.setFillColor(37, 99, 235) // Blue
+        doc.rect(0, 0, 210, 40, 'F')
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(24)
+        doc.text('HOME72', 20, 20)
+        doc.setFontSize(12)
+        doc.text('Invoice Pembayaran Sewa Kamar', 20, 30)
+
+        // Invoice Info
+        doc.setTextColor(0, 0, 0)
+        doc.setFontSize(10)
+        doc.text(`Invoice ID: ${payment.id.substring(0, 8)}...`, 20, 55)
+        doc.text(`Tanggal: ${new Date(payment.created_at).toLocaleDateString('id-ID')}`, 20, 62)
+
+        // Tenant Info
+        const tenant = payment.tenants as any
+        doc.setFontSize(12)
+        doc.text('Informasi Penyewa:', 20, 75)
+        doc.setFontSize(10)
+        doc.text(`Nama: ${tenant?.name || 'N/A'}`, 20, 82)
+        doc.text(`Kamar: ${tenant?.rooms?.room_number || 'N/A'}`, 20, 89)
+
+        // Payment Details
+        doc.setFontSize(12)
+        doc.text('Detail Pembayaran:', 20, 115)
+        doc.setFontSize(10)
+        doc.text(`Periode: ${payment.month}`, 20, 122)
+        doc.text(`Jumlah: Rp ${payment.amount.toLocaleString('id-ID')}`, 20, 129)
+        doc.text('Status: LUNAS', 20, 136)
+
+        if (payment.verified_at) {
+            doc.text(`Diverifikasi: ${new Date(payment.verified_at).toLocaleDateString('id-ID')}`, 20, 143)
+        }
+
+        // LUNAS Stamp
+        doc.setDrawColor(37, 99, 235)
+        doc.setLineWidth(1)
+        doc.rect(140, 110, 50, 20)
+        doc.setTextColor(37, 99, 235)
+        doc.setFontSize(10)
+        doc.text('LUNAS', 150, 122)
+
+        // Footer
+        doc.setFontSize(8)
+        doc.setTextColor(128, 128, 128)
+        doc.text('Home72 Kosan - Sistem Manajemen Kosan Modern', 20, 280)
+
+        // 3. Convert to Buffer
+        const pdfArrayBuffer = doc.output('arraybuffer')
+        const pdfBuffer = Buffer.from(pdfArrayBuffer)
+
+        // 4. Send directly to Telegram
+        await sendDocument(chatId, pdfBuffer, {}, {
+            filename: `Invoice_${payment.month}.pdf`,
+            contentType: 'application/pdf'
+        })
+
     } catch (error) {
         await sendMessage(chatId, '❌ Gagal generate invoice.')
-        console.error(error)
+        console.error('Invoice error:', error)
     }
 }

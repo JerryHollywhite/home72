@@ -22,9 +22,9 @@ export async function sendPhoto(chatId: number, photo: string | Buffer, caption?
     }
 }
 
-export async function sendDocument(chatId: number, document: string | Buffer, options?: any) {
+export async function sendDocument(chatId: number, document: string | Buffer, options?: any, fileOptions?: { filename?: string; contentType?: string }) {
     try {
-        await bot.sendDocument(chatId, document, options)
+        await bot.sendDocument(chatId, document, options, fileOptions)
         return { success: true }
     } catch (error) {
         console.error('Telegram send document error:', error)
