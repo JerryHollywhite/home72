@@ -1,6 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import jsPDF from 'jspdf'
+import 'jspdf-autotable'
+
+// Add type for autotable
+interface jsPDFWithAutoTable extends jsPDF {
+    autoTable: (options: any) => jsPDF;
+}
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -41,72 +47,151 @@ export async function GET(
 
         if (tenantError) {
             console.error('Tenant not found for invoice:', tenantError)
-            // Continue with limited info if tenant not found
         }
 
         // Generate PDF
-        const doc = new jsPDF()
+        const doc = new jsPDF() as jsPDFWithAutoTable
 
-        // Header
-        doc.setFillColor(37, 99, 235) // Blue
+        // --- DESIGN CONSTANTS ---
+        const primaryColor = '#2563EB' // Blue 600
+        const secondaryColor = '#1E40AF' // Blue 800
+        const accentColor = '#F3F4F6' // Gray 100
+        const textColor = '#1F2937' // Gray 800
+        const mutedColor = '#6B7280' // Gray 500
+
+        // --- HEADER ---
+        // Blue Top Bar
+        doc.setFillColor(primaryColor)
         doc.rect(0, 0, 210, 40, 'F')
+
+        // Company Name
         doc.setTextColor(255, 255, 255)
-        doc.setFontSize(24)
-        doc.text('HOME72', 20, 20)
-        doc.setFontSize(12)
-        doc.text('Invoice Pembayaran Sewa Kamar', 20, 30)
+        doc.setFontSize(26)
+        doc.setFont('helvetica', 'bold')
+        doc.text('HOME72', 15, 25)
 
-        // Invoice Info
-        doc.setTextColor(0, 0, 0)
-        doc.setFontSize(10)
-        doc.text(`Invoice ID: ${payment.id.substring(0, 8)}...`, 20, 55)
-        doc.text(`Tanggal: ${new Date(payment.created_at).toLocaleDateString('id-ID')}`, 20, 62)
+        // Invoice Label
+        doc.setFontSize(30)
+        doc.setTextColor(255, 255, 255)
+        doc.setFont('helvetica', 'bold')
+        doc.text('INVOICE', 195, 28, { align: 'right' })
 
-        // Tenant Info
-        doc.setFontSize(12)
-        doc.text('Informasi Penyewa:', 20, 75)
+        // Invoice Details Box
+        doc.setFillColor(255, 255, 255)
+        doc.setDrawColor(200, 200, 200)
+        doc.roundedRect(15, 50, 180, 35, 2, 2, 'S')
+
+        // Invoice Number & Date
+        doc.setTextColor(textColor)
         doc.setFontSize(10)
+        doc.setFont('helvetica', 'normal')
+
+        // Left Side: Bill To
+        doc.setFont('helvetica', 'bold')
+        doc.text('DITAGIHKAN KEPADA:', 20, 60)
+        doc.setFont('helvetica', 'normal')
+
         if (tenant) {
-            doc.text(`Nama: ${tenant.name}`, 20, 82)
-            doc.text(`Kamar: ${(tenant.rooms as any)?.room_number || 'N/A'}`, 20, 89)
-            doc.text(`Telepon: ${tenant.phone}`, 20, 96)
+            doc.text(`${tenant.name}`, 20, 66)
+            doc.text(`Kamar: ${(tenant.rooms as any)?.room_number || 'N/A'}`, 20, 72)
+            doc.text(`${tenant.phone}`, 20, 78)
         } else {
-            doc.text('Pelanggan: Informasi tidak tersedia', 20, 82)
+            doc.text('Informasi Penyewa Tidak Tersedia', 20, 66)
         }
 
-        // Payment Details
-        doc.setFontSize(12)
-        doc.text('Detail Pembayaran:', 20, 115)
-        doc.setFontSize(10)
-        doc.text(`Periode: ${payment.month}`, 20, 122)
-        doc.text(`Metode: ${payment.payment_method === 'qris' ? 'QRIS' : payment.payment_method === 'transfer' ? 'Transfer Bank' : 'Cash'}`, 20, 129)
-        doc.text(`Jumlah: Rp ${payment.amount.toLocaleString('id-ID')}`, 20, 136)
+        // Right Side: Invoice Info
+        doc.setFont('helvetica', 'bold')
+        doc.text('DETAIL TAGIHAN:', 120, 60)
+        doc.setFont('helvetica', 'normal')
+        doc.text(`No. Invoice : #${payment.id.substring(0, 8).toUpperCase()}`, 120, 66)
+        doc.text(`Tanggal     : ${new Date(payment.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, 120, 72)
 
-        let statusLabel = 'Menunggu Verifikasi'
-        if (payment.status === 'verified') statusLabel = 'LUNAS / TERVERIFIKASI'
-        if (payment.status === 'rejected') statusLabel = 'DITOLAK'
-
-        doc.text(`Status: ${statusLabel}`, 20, 143)
-
-        if (payment.verified_at) {
-            doc.text(`Diverifikasi: ${new Date(payment.verified_at).toLocaleDateString('id-ID')}`, 20, 150)
-        }
-
-        // Add Stamp/Signature placeholder for verified
+        let statusText = 'MENUNGGU VERIFIKASI'
+        let statusColor = [234, 179, 8] // Yellow
         if (payment.status === 'verified') {
-            doc.setDrawColor(37, 99, 235)
-            doc.setLineWidth(1)
-            doc.rect(140, 110, 50, 20)
-            doc.setTextColor(37, 99, 235)
-            doc.setFontSize(10)
-            doc.text('LUNAS', 150, 122)
+            statusText = 'LUNAS'
+            statusColor = [22, 163, 74] // Green
+        } else if (payment.status === 'rejected') {
+            statusText = 'DITOLAK'
+            statusColor = [220, 38, 38] // Red
         }
 
-        // Footer
+        doc.text('Status        : ', 120, 78)
+        doc.setTextColor(statusColor[0], statusColor[1], statusColor[2])
+        doc.setFont('helvetica', 'bold')
+        doc.text(statusText, 145, 78)
+        doc.setTextColor(textColor) // Reset text color
+
+        // --- TABLE ---
+        const tableBody = [
+            [
+                `Pembayaran Sewa Periode ${payment.month}`,
+                `Pembayaran via ${payment.payment_method === 'qris' ? 'QRIS' : payment.payment_method === 'transfer' ? 'Transfer Bank' : 'Cash'}`,
+                `Rp ${payment.amount.toLocaleString('id-ID')}`
+            ]
+        ]
+
+        doc.autoTable({
+            startY: 95,
+            head: [['Item / Layanan', 'Deskripsi', 'Jumlah']],
+            body: tableBody,
+            theme: 'grid',
+            headStyles: {
+                fillColor: primaryColor,
+                textColor: 255,
+                fontStyle: 'bold',
+                halign: 'center'
+            },
+            columnStyles: {
+                0: { cellWidth: 80 },
+                1: { cellWidth: 70 },
+                2: { cellWidth: 30, halign: 'right', fontStyle: 'bold' }
+            },
+            styles: {
+                fontSize: 10,
+                cellPadding: 5,
+                valign: 'middle'
+            }
+        })
+
+        // --- TOTAL ---
+        const finalY = (doc as any).lastAutoTable.finalY + 10
+
+        doc.setFontSize(14)
+        doc.setFont('helvetica', 'bold')
+        doc.text('TOTAL', 140, finalY)
+        doc.text(`Rp ${payment.amount.toLocaleString('id-ID')}`, 195, finalY, { align: 'right' })
+
+        // --- FOOTER & STAMP ---
+        if (payment.status === 'verified') {
+            // "LUNAS" Stamp
+            doc.setDrawColor(22, 163, 74)
+            doc.setLineWidth(1)
+            doc.roundedRect(150, finalY - 50, 40, 15, 2, 2, 'D')
+            doc.setTextColor(22, 163, 74)
+            doc.setFontSize(12)
+            doc.text('LUNAS', 170, finalY - 40, { align: 'center', angle: -10 })
+        }
+
+        // Terms
+        doc.setFontSize(9)
+        doc.setTextColor(mutedColor)
+        doc.setFont('helvetica', 'normal')
+
+        const pageHeight = doc.internal.pageSize.height
+
+        doc.text('Terima kasih atas pembayaran Anda.', 15, pageHeight - 30)
+        doc.text('Bukti pembayaran ini sah dan diterbitkan secara otomatis oleh sistem Home72.', 15, pageHeight - 25)
+
+        // Bottom Line
+        doc.setDrawColor(primaryColor)
+        doc.setLineWidth(1)
+        doc.line(0, pageHeight - 15, 210, pageHeight - 15)
+
         doc.setFontSize(8)
-        doc.setTextColor(128, 128, 128)
-        doc.text('Home72 Kosan - Sistem Manajemen Kosan Modern', 20, 280)
-        doc.text('Generated: ' + new Date().toLocaleString('id-ID'), 20, 285)
+        doc.setTextColor(150, 150, 150)
+        doc.text('Home72 Kosan Management System', 105, pageHeight - 10, { align: 'center' })
+
 
         // Generate PDF buffer
         const pdfBuffer = doc.output('arraybuffer')

@@ -12,7 +12,7 @@ export default function TenantLayout({
         <div className="min-h-screen flex flex-col bg-gray-50">
             <header className="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 px-6 shadow-md">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
-                    <Link href="/tenant/dashboard" className="flex items-center space-x-3">
+                    <Link href="https://kos72.otomasikan.com" className="flex items-center space-x-3">
                         <DoorOpen className="h-8 w-8" />
                         <div>
                             <h1 className="text-xl font-bold">Home72</h1>
