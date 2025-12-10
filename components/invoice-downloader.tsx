@@ -3,18 +3,13 @@
 import { Button } from '@/components/ui/button'
 import { Download } from 'lucide-react'
 import jsPDF from 'jspdf'
-import 'jspdf-autotable'
-
-// Add type for autotable
-interface jsPDFWithAutoTable extends jsPDF {
-    autoTable: (options: any) => jsPDF;
-}
+import autoTable from 'jspdf-autotable'
 
 export function InvoiceDownloader({ payment, tenant }: { payment: any, tenant: any }) {
 
     const handleDownload = () => {
         try {
-            const doc = new jsPDF() as jsPDFWithAutoTable
+            const doc = new jsPDF()
 
             // --- DESIGN CONSTANTS ---
             const primaryColor = '#2563EB' // Blue 600
@@ -55,8 +50,10 @@ export function InvoiceDownloader({ payment, tenant }: { payment: any, tenant: a
 
             if (tenant) {
                 doc.text(`${tenant.name}`, 20, 66)
-                doc.text(`Kamar: ${tenant.rooms?.room_number || 'N/A'}`, 20, 72)
-                doc.text(`${tenant.phone}`, 20, 78)
+                // Use safe optional chaining and fallback
+                const roomNum = tenant.room_number || tenant.rooms?.room_number || 'N/A'
+                doc.text(`Kamar: ${roomNum}`, 20, 72)
+                doc.text(`${tenant.phone || '-'}`, 20, 78)
             } else {
                 doc.text('Informasi Penyewa Tidak Tersedia', 20, 66)
             }
@@ -65,8 +62,12 @@ export function InvoiceDownloader({ payment, tenant }: { payment: any, tenant: a
             doc.setFont('helvetica', 'bold')
             doc.text('DETAIL TAGIHAN:', 120, 60)
             doc.setFont('helvetica', 'normal')
-            doc.text(`No. Invoice : #${payment.id.substring(0, 8).toUpperCase()}`, 120, 66)
-            doc.text(`Tanggal     : ${new Date(payment.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, 120, 72)
+            doc.text(`No. Invoice : #${(payment.id || '000').substring(0, 8).toUpperCase()}`, 120, 66)
+
+            const dateStr = payment.created_at
+                ? new Date(payment.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+                : '-'
+            doc.text(`Tanggal     : ${dateStr}`, 120, 72)
 
             let statusText = 'MENUNGGU VERIFIKASI'
             let statusColor = [234, 179, 8] // Yellow
@@ -87,13 +88,13 @@ export function InvoiceDownloader({ payment, tenant }: { payment: any, tenant: a
             // --- TABLE ---
             const tableBody = [
                 [
-                    `Pembayaran Sewa Periode ${payment.month}`,
+                    `Pembayaran Sewa Periode ${payment.month || '-'}`,
                     `Pembayaran via ${payment.payment_method === 'qris' ? 'QRIS' : payment.payment_method === 'transfer' ? 'Transfer Bank' : 'Cash'}`,
-                    `Rp ${payment.amount.toLocaleString('id-ID')}`
+                    `Rp ${(payment.amount || 0).toLocaleString('id-ID')}`
                 ]
             ]
 
-            doc.autoTable({
+            autoTable(doc, {
                 startY: 100, // Adjusted Y
                 head: [['Item / Layanan', 'Deskripsi', 'Jumlah']],
                 body: tableBody,
