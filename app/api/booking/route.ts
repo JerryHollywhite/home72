@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
 
         // Send Telegram Notification
         if (process.env.TELEGRAM_ADMIN_CHAT_ID) {
+            console.log('Attempting to send Telegram notification to:', process.env.TELEGRAM_ADMIN_CHAT_ID)
             const message = `
 🔔 *Booking Baru!*
 
@@ -73,7 +74,10 @@ export async function POST(request: NextRequest) {
 Mohon cek Dashboard untuk Approval.
             `.trim()
 
-            await sendMessage(Number(process.env.TELEGRAM_ADMIN_CHAT_ID), message, { parse_mode: 'Markdown' })
+            const telegramRes = await sendMessage(Number(process.env.TELEGRAM_ADMIN_CHAT_ID), message, { parse_mode: 'Markdown' })
+            console.log('Telegram response:', telegramRes)
+        } else {
+            console.warn('TELEGRAM_ADMIN_CHAT_ID is not set, skipping notification')
         }
 
         return NextResponse.json(data, { status: 201 })

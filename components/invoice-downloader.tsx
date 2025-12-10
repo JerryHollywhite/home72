@@ -3,13 +3,21 @@
 import { Button } from '@/components/ui/button'
 import { Download } from 'lucide-react'
 import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import 'jspdf-autotable'
 
 export function InvoiceDownloader({ payment, tenant }: { payment: any, tenant: any }) {
 
     const handleDownload = () => {
         try {
             const doc = new jsPDF()
+
+            // Explicitly cast to any to access autoTable from side-effect import
+            const docAny = doc as any
+            if (typeof docAny.autoTable !== 'function') {
+                console.error('autoTable is not a function on jsPDF instance')
+                alert('Gagal memuat library PDF. Silakan refresh halaman.')
+                return
+            }
 
             // --- DESIGN CONSTANTS ---
             const primaryColor = '#2563EB' // Blue 600
@@ -94,7 +102,7 @@ export function InvoiceDownloader({ payment, tenant }: { payment: any, tenant: a
                 ]
             ]
 
-            autoTable(doc, {
+            docAny.autoTable({
                 startY: 100, // Adjusted Y
                 head: [['Item / Layanan', 'Deskripsi', 'Jumlah']],
                 body: tableBody,
@@ -118,7 +126,7 @@ export function InvoiceDownloader({ payment, tenant }: { payment: any, tenant: a
             })
 
             // --- TOTAL ---
-            const finalY = (doc as any).lastAutoTable.finalY + 10
+            const finalY = docAny.lastAutoTable.finalY + 10
 
             doc.setFontSize(14)
             doc.setFont('helvetica', 'bold')
