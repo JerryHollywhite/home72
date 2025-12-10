@@ -43,7 +43,8 @@ export async function POST(request: NextRequest) {
                 room_id: body.room_id,
                 booking_date: body.booking_date,
                 dp_amount: body.dp_amount,
-                proof_url: body.proof_url
+                proof_url: body.proof_url,
+                ktp_url: body.ktp_url
             })
             .select(`
                 *,
