@@ -32,6 +32,7 @@ export default function BookingPage() {
         dp_amount: '',
     })
     const [proofFile, setProofFile] = useState<File | null>(null)
+    const [ktpFile, setKtpFile] = useState<File | null>(null)
     const [uploading, setUploading] = useState(false)
     const [error, setError] = useState('')
     const [success, setSuccess] = useState('')
@@ -56,7 +57,7 @@ export default function BookingPage() {
         setSelectedRoom(room)
         setFormData({
             ...formData,
-            dp_amount: room.price.toString(), // Full 1 Month Deposit
+            dp_amount: room.price.toString(), // Base Amount for Deposit calculation
         })
         setIsDialogOpen(true)
     }
@@ -67,7 +68,13 @@ export default function BookingPage() {
         }
     }
 
-    const uploadProof = async (file: File): Promise<string> => {
+    const handleKtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setKtpFile(e.target.files[0])
+        }
+    }
+
+    const uploadFile = async (file: File): Promise<string> => {
         const formData = new FormData()
         formData.append('file', file)
 
@@ -79,7 +86,7 @@ export default function BookingPage() {
 
         if (!res.ok) {
             const err = await res.json()
-            throw new Error(err.error || 'Gagal upload bukti bayar')
+            throw new Error(err.error || 'Gagal upload file')
         }
 
         const data = await res.json()
@@ -96,12 +103,17 @@ export default function BookingPage() {
             setError('Mohon upload bukti transfer terlebih dahulu')
             return
         }
+        if (!ktpFile) {
+            setError('Mohon upload KTP terlebih dahulu')
+            return
+        }
 
         try {
             setUploading(true)
 
-            // 1. Upload Proof
-            const proofUrl = await uploadProof(proofFile)
+            // 1. Upload Files
+            const proofUrl = await uploadFile(proofFile)
+            const ktpUrl = await uploadFile(ktpFile)
 
             // 2. Create Booking
             const res = await fetch('/api/booking', {
@@ -112,8 +124,9 @@ export default function BookingPage() {
                     phone: formData.phone,
                     room_id: selectedRoom.id,
                     booking_date: formData.booking_date,
-                    dp_amount: Number(formData.dp_amount),
-                    proof_url: proofUrl
+                    dp_amount: selectedRoom.price, // Storing base deposit amount (1 month)
+                    proof_url: proofUrl,
+                    ktp_url: ktpUrl
                 }),
             })
 
@@ -130,6 +143,7 @@ export default function BookingPage() {
                 dp_amount: '',
             })
             setProofFile(null)
+            setKtpFile(null)
             setTimeout(() => {
                 setIsDialogOpen(false)
                 setSuccess('')
@@ -301,23 +315,50 @@ export default function BookingPage() {
                             />
                         </div>
 
-                        {/* Payment Info */}
-                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 space-y-2">
-                            <p className="text-sm font-semibold text-blue-900">Silakan Transfer Pembayaran:</p>
-                            <div className="text-blue-800">
-                                <p className="text-xs text-blue-600">Bank Transfer</p>
-                                <p className="font-bold text-lg font-mono">BCA 1234567890</p>
-                                <p className="text-sm">a.n Home72 Management</p>
+                        {/* Payment Details */}
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                            <h3 className="font-semibold text-blue-800 mb-2">Rincian Pembayaran Awal</h3>
+                            <div className="space-y-1 text-sm text-blue-700">
+                                <div className="flex justify-between">
+                                    <span>Sewa Bulan Pertama:</span>
+                                    <span>Rp {selectedRoom?.price.toLocaleString('id-ID')}</span>
+                                </div>
+                                <div className="flex justify-between font-medium">
+                                    <span>Deposit (Jaminan):</span>
+                                    <span>Rp {selectedRoom?.price.toLocaleString('id-ID')}</span>
+                                </div>
+                                <div className="border-t border-blue-200 my-2 pt-2 flex justify-between font-bold text-lg">
+                                    <span>Total Transfer:</span>
+                                    <span>Rp {(selectedRoom?.price * 2).toLocaleString('id-ID')}</span>
+                                </div>
                             </div>
-                            <div className="pt-2 border-t border-blue-200">
-                                <p className="text-xs text-blue-700">Total yang harus ditransfer:</p>
-                                <p className="text-xl font-bold text-blue-900">
-                                    Rp {selectedRoom?.price.toLocaleString('id-ID')}
-                                </p>
-                                <p className="text-[10px] text-blue-600 italic">
-                                    (1 Bulan Sewa sebagai Deposit)
-                                </p>
+                            <p className="text-xs text-blue-600 mt-2">
+                                *Deposit akan dikembalikan saat Anda check-out (bila tidak ada tunggakan/kerusakan).
+                            </p>
+                        </div>
+
+                        <div className="space-y-2 text-sm">
+                            <p className="font-medium">Silakan transfer Total ke:</p>
+                            <div className="bg-gray-100 p-3 rounded text-center font-mono text-lg font-bold tracking-wider border border-gray-300">
+                                BCA 1234567890
                             </div>
+                            <p className="text-center text-gray-500 text-xs">a.n. Home72 Management</p>
+                        </div>
+
+                        {/* KTP Upload */}
+                        <div className="space-y-2">
+                            <Label htmlFor="ktp">Foto KTP (Wajib) *</Label>
+                            <Input
+                                id="ktp"
+                                type="file"
+                                accept="image/*"
+                                onChange={handleKtpChange}
+                                required
+                                className="cursor-pointer"
+                            />
+                            <p className="text-xs text-gray-500">
+                                Upload foto KTP/Identitas yang jelas.
+                            </p>
                         </div>
 
                         {/* Payment Proof Upload */}

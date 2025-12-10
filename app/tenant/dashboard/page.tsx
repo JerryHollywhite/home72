@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
+import { InvoiceDownloader } from '@/components/invoice-downloader'
 
 type Tenant = {
     id: string
@@ -47,7 +48,7 @@ export default function TenantDashboard() {
         setLoading(false)
     }, [router])
 
-    const [latestInvoiceId, setLatestInvoiceId] = useState<string | null>(null)
+    const [latestPayment, setLatestPayment] = useState<any | null>(null)
 
     useEffect(() => {
         if (tenant?.id) {
@@ -62,28 +63,10 @@ export default function TenantDashboard() {
             // Find first verified payment
             const latestVerified = data.find((p: any) => p.status === 'verified')
             if (latestVerified) {
-                setLatestInvoiceId(latestVerified.id)
+                setLatestPayment(latestVerified)
             }
         } catch (error) {
             console.error('Error fetching invoice:', error)
-        }
-    }
-
-    const handleDownloadInvoice = async () => {
-        if (!latestInvoiceId) return
-
-        try {
-            const res = await fetch(`/api/tenant/invoice/${latestInvoiceId}?v=${new Date().getTime()}`)
-            const blob = await res.blob()
-            const url = window.URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `Invoice_${latestInvoiceId}.pdf`
-            a.click()
-            window.URL.revokeObjectURL(url)
-        } catch (error) {
-            console.error('Error downloading invoice:', error)
-            alert('Gagal download invoice')
         }
     }
 
@@ -239,18 +222,20 @@ export default function TenantDashboard() {
                     </Card>
                 </Link>
 
-                <Card
-                    className={`hover:shadow-lg transition h-full ${latestInvoiceId ? 'cursor-pointer' : 'opacity-75 cursor-not-allowed'}`}
-                    onClick={handleDownloadInvoice}
-                >
-                    <CardContent className="p-6 text-center">
-                        <div className="bg-purple-100 rounded-full p-4 w-16 h-16 mx-auto mb-3 flex items-center justify-center">
-                            <FileText className="h-8 w-8 text-purple-600" />
+                <Card className={`hover:shadow-lg transition h-full ${latestPayment ? '' : 'opacity-75'}`}>
+                    <CardContent className="p-6 text-center flex flex-col items-center h-full justify-between">
+                        <div>
+                            <div className="bg-purple-100 rounded-full p-4 w-16 h-16 mx-auto mb-3 flex items-center justify-center">
+                                <FileText className="h-8 w-8 text-purple-600" />
+                            </div>
+                            <h3 className="font-semibold mb-1">Invoice</h3>
+                            <p className="text-sm text-gray-600 mb-4">
+                                {latestPayment ? 'Download terbaru' : 'Belum ada invoice'}
+                            </p>
                         </div>
-                        <h3 className="font-semibold mb-1">Invoice</h3>
-                        <p className="text-sm text-gray-600">
-                            {latestInvoiceId ? 'Download terbaru' : 'Belum ada invoice'}
-                        </p>
+                        {latestPayment && tenant && (
+                            <InvoiceDownloader payment={latestPayment} tenant={tenant} />
+                        )}
                     </CardContent>
                 </Card>
             </div>

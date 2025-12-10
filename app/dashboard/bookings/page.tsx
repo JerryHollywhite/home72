@@ -24,6 +24,8 @@ type Booking = {
     room_id: string
     booking_date: string
     dp_amount: number
+    proof_url?: string
+    ktp_url?: string
     status: string
     created_at: string
     rooms: {
@@ -158,6 +160,18 @@ export default function BookingsPage() {
                                             </TableCell>
                                             <TableCell>
                                                 Rp {booking.dp_amount.toLocaleString('id-ID')}
+                                                <div className="flex space-x-2 mt-1">
+                                                    {booking.proof_url && (
+                                                        <a href={booking.proof_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">
+                                                            [Bukti]
+                                                        </a>
+                                                    )}
+                                                    {booking.ktp_url && (
+                                                        <a href={booking.ktp_url} target="_blank" rel="noreferrer" className="text-xs text-blue-600 hover:underline">
+                                                            [KTP]
+                                                        </a>
+                                                    )}
+                                                </div>
                                             </TableCell>
                                             <TableCell>
                                                 <Badge

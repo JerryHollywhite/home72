@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
 📅 Tgl Mulai: ${body.booking_date}
 💰 Deposit: Rp ${Number(body.dp_amount || 0).toLocaleString('id-ID')}
 📎 [Bukti Transfer](${body.proof_url})
+🪪 [KTP/Identitas](${body.ktp_url || '#'})
 
 Mohon cek Dashboard untuk Approval.
             `.trim()
